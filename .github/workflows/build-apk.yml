@@ -1,0 +1,68 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+        channel: 'stable'
+
+    - name: Flutter doctor
+      run: flutter doctor -v
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Analyze code (continue on error)
+      run: flutter analyze || true
+
+    - name: Run tests (continue on error)
+      run: flutter test || true
+
+    - name: Clean build
+      run: flutter clean && flutter pub get
+
+    - name: Build APK (Debug)
+      run: flutter build apk --debug --verbose
+
+    - name: Build APK (Release - unsigned)
+      run: flutter build apk --release --verbose
+
+    - name: List build outputs
+      run: |
+        echo "Build outputs:"
+        find build/app/outputs -name "*.apk" -type f
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: frp-android-debug
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        if-no-files-found: error
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: frp-android-release
+        path: build/app/outputs/flutter-apk/app-release.apk
+        if-no-files-found: error

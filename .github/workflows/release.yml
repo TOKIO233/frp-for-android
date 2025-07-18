@@ -1,0 +1,78 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+        channel: 'stable'
+        
+    - name: Get dependencies
+      run: flutter pub get
+      
+    - name: Build Release APK
+      run: flutter build apk --release --verbose
+      
+    - name: Get version from pubspec.yaml
+      id: version
+      run: |
+        VERSION=$(grep '^version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Rename APK
+      run: |
+        mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/frp-android-${{ steps.version.outputs.version }}.apk
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+        name: FRP Android ${{ steps.version.outputs.version }}
+        body: |
+          ## FRP Android ${{ steps.version.outputs.version }}
+          
+          Fast Reverse Proxy For Android
+          
+          ### 下载说明
+          - `frp-android-${{ steps.version.outputs.version }}.apk`: 发布版本APK（未签名）
+          
+          ### 安装说明
+          1. 下载APK文件
+          2. 在Android设备上启用"未知来源"安装
+          3. 安装APK文件
+          
+          ### 使用说明
+          - 先编辑配置并保存，然后点击启动
+          - 软件不会检测配置是否正确，请自行保证配置正确
+          - 配置请参考 [frp官方文档](https://github.com/fatedier/frp)
+          - 请不要做日志相关配置，会导致软件无法检测到frpc输出的日志
+        files: |
+          build/app/outputs/flutter-apk/frp-android-${{ steps.version.outputs.version }}.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
