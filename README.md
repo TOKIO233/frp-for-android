@@ -62,7 +62,6 @@ flutter build apk --release
 2. 或者在GitHub网页上手动触发Release工作流
 
 这将自动构建APK并创建GitHub Release，包含下载链接和说明文档。
-
 ## Usage
 
 ✨先编辑配置并保存，然后点击启动。软件不会检测配置是否正确，请自行保证配置正确。配置请参考[frp](https://github.com/fatedier/frp)。
